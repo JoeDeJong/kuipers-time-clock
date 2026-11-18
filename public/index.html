@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Time Clock</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="kiosk">
+    <header class="kiosk-header">
+      <div class="company" id="company">Time Clock</div>
+      <a class="admin-link" href="/admin">Admin</a>
+    </header>
+
+    <main class="kiosk-main">
+      <section class="clock-panel">
+        <div class="clock-time" id="clockTime">--:--</div>
+        <div class="clock-date" id="clockDate"></div>
+      </section>
+
+      <section class="pin-panel" id="pinPanel">
+        <div class="pin-label">Enter your PIN</div>
+        <div class="pin-dots" id="pinDots"></div>
+        <div class="pin-msg" id="pinMsg"></div>
+        <div class="keypad" id="keypad">
+          <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+          <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+          <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+          <button data-k="clear" class="fn">Clear</button><button data-k="0">0</button><button data-k="back" class="fn">&#9003;</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Employee status: choose Clock In / Clock Out -->
+  <div class="overlay hidden" id="statusView">
+    <div class="card">
+      <h1 id="stName"></h1>
+      <div class="status-line" id="stLine"></div>
+      <div class="week-stats">
+        <div><b id="stReg">0.00</b><small>Regular hrs this week</small></div>
+        <div><b id="stOt" class="ot">0.00</b><small>Overtime hrs this week</small></div>
+      </div>
+      <button class="big-btn" id="punchBtn"></button>
+      <button class="cancel-btn" id="cancelBtn">Cancel</button>
+      <div class="pin-msg" id="stMsg" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- Confirmation -->
+  <div class="overlay hidden" id="doneView">
+    <div class="card">
+      <div class="confirm-icon" id="dnIcon"></div>
+      <h1 id="dnTitle"></h1>
+      <div class="confirm-time" id="dnTime"></div>
+      <div class="muted" id="dnDetail"></div>
+      <div class="week-stats" style="margin-top:20px">
+        <div><b id="dnReg">0.00</b><small>Regular hrs this week</small></div>
+        <div><b id="dnOt" class="ot">0.00</b><small>Overtime hrs this week</small></div>
+      </div>
+      <button class="cancel-btn" id="doneBtn">Done</button>
+      <div class="countdown" id="dnCount"></div>
+    </div>
+  </div>
+
+  <script src="/js/kiosk.js"></script>
+</body>
+</html>

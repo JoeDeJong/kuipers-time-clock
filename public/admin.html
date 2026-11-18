@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <title>Time Clock Admin</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Login / first-time setup -->
+  <div class="login-wrap hidden" id="loginView">
+    <div class="card" style="max-width:420px">
+      <h1 style="font-size:1.6rem">Admin</h1>
+      <form id="loginForm">
+        <p class="muted" id="loginHint">Enter the admin PIN.</p>
+        <div class="field">
+          <input type="password" id="loginPin" inputmode="numeric" autocomplete="off" pattern="\d*" placeholder="Admin PIN" style="font-size:1.6rem;text-align:center" required>
+        </div>
+        <div class="field hidden" id="loginConfirmWrap" style="margin-top:10px">
+          <input type="password" id="loginConfirm" inputmode="numeric" autocomplete="off" pattern="\d*" placeholder="Confirm PIN" style="font-size:1.6rem;text-align:center">
+        </div>
+        <div class="err" id="loginErr"></div>
+        <button class="btn primary" style="width:100%;margin-top:10px" id="loginBtn">Log in</button>
+      </form>
+      <p><a href="/" class="muted">&larr; Back to time clock</a></p>
+    </div>
+  </div>
+
+  <div class="admin hidden" id="adminView">
+    <div class="admin-top">
+      <h1 id="adminTitle">Admin</h1>
+      <nav class="tabs" id="tabs">
+        <button data-tab="dashboard" class="active">Who's In</button>
+        <button data-tab="timesheets">Timesheets</button>
+        <button data-tab="punches">Punches</button>
+        <button data-tab="employees">Employees</button>
+        <button data-tab="settings">Settings</button>
+        <button data-tab="audit">Audit Log</button>
+      </nav>
+      <a class="btn small" href="/">Time Clock</a>
+      <button class="btn small" id="logoutBtn">Log out</button>
+    </div>
+
+    <div class="admin-body">
+      <!-- Dashboard -->
+      <section data-panel="dashboard">
+        <div class="panel">
+          <h2>Who's clocked in <span class="muted" id="dashWeek" style="font-weight:400;font-size:.9rem"></span></h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Employee</th><th>Status</th><th class="num">Regular (wk)</th><th class="num">Overtime (wk)</th><th></th></tr></thead>
+              <tbody id="dashBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Timesheets -->
+      <section data-panel="timesheets" class="hidden">
+        <div class="toolbar">
+          <div class="field"><label>Period</label>
+            <select id="tsPreset">
+              <option value="this_week">This week</option>
+              <option value="last_week">Last week</option>
+              <option value="last_2_weeks">Last 2 weeks</option>
+              <option value="this_month">This month</option>
+              <option value="last_month">Last month</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="field"><label>From</label><input type="date" id="tsFrom"></div>
+          <div class="field"><label>To</label><input type="date" id="tsTo"></div>
+          <button class="btn primary" id="tsRun">Show</button>
+          <a class="btn" id="tsCsv">Export CSV</a>
+          <a class="btn" id="tsCsvDaily">Export daily CSV</a>
+          <button class="btn" onclick="window.print()">Print</button>
+        </div>
+        <div class="panel">
+          <h2 id="tsTitle">Timesheet</h2>
+          <p class="hint" id="tsRules"></p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Employee</th><th class="num">Regular</th><th class="num">Overtime</th><th class="num">Total</th><th></th></tr></thead>
+              <tbody id="tsBody"></tbody>
+            </table>
+          </div>
+          <p class="hint">Tap an employee to see their daily breakdown. Hours are in decimal (e.g. 7.50 = 7 h 30 m).</p>
+        </div>
+      </section>
+
+      <!-- Punches -->
+      <section data-panel="punches" class="hidden">
+        <div class="toolbar">
+          <div class="field"><label>Employee</label><select id="puEmp"></select></div>
+          <div class="field"><label>From</label><input type="date" id="puFrom"></div>
+          <div class="field"><label>To</label><input type="date" id="puTo"></div>
+          <button class="btn primary" id="puRun">Show</button>
+          <button class="btn" id="puAdd">+ Add punch</button>
+        </div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Employee</th><th>Clock in</th><th>Clock out</th><th class="num">Hours</th><th>Note</th><th></th></tr></thead>
+              <tbody id="puBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Employees -->
+      <section data-panel="employees" class="hidden">
+        <div class="toolbar"><button class="btn primary" id="empAdd">+ Add employee</button></div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Status</th><th>Added</th><th></th></tr></thead>
+              <tbody id="empBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section data-panel="settings" class="hidden">
+        <form id="setForm">
+          <div class="grid2">
+            <div class="panel">
+              <h2>General</h2>
+              <div class="field"><label>Company name (shown on the time clock)</label><input id="setCompany" maxlength="80"></div>
+              <div class="field" style="margin-top:12px"><label>Employee PIN length</label>
+                <select id="setPinLen"><option>4</option><option>5</option><option>6</option></select>
+                <div class="hint">Can only be changed before any employees are added.</div>
+              </div>
+            </div>
+            <div class="panel">
+              <h2>Overtime rules</h2>
+              <div class="field"><label>Weekly overtime after (hours)</label><input type="number" id="setWeekly" min="0" max="168" step="0.25"></div>
+              <div class="hint">US federal rule is 40. Use 0 to turn off weekly overtime.</div>
+              <div class="field" style="margin-top:12px"><label>Daily overtime after (hours)</label><input type="number" id="setDaily" min="0" max="24" step="0.25"></div>
+              <div class="hint">0 = off. Some states (e.g. CA) use 8.</div>
+              <div class="field" style="margin-top:12px"><label>Workweek starts on</label>
+                <select id="setWeekStart">
+                  <option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option>
+                  <option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option>
+                </select>
+              </div>
+            </div>
+            <div class="panel">
+              <h2>Admin PIN</h2>
+              <div class="field"><label>New admin PIN (4-8 digits)</label><input type="password" id="setAdminPin" inputmode="numeric" autocomplete="new-password"></div>
+              <div class="field" style="margin-top:12px"><label>Confirm new admin PIN</label><input type="password" id="setAdminPin2" inputmode="numeric" autocomplete="new-password"></div>
+              <div class="hint">Leave blank to keep the current PIN.</div>
+            </div>
+            <div class="panel">
+              <h2>Backup</h2>
+              <p class="hint">Download a full copy of the time clock database. Keep backups somewhere safe (e.g. a USB drive or cloud folder).</p>
+              <a class="btn" href="/api/admin/backup">Download backup</a>
+            </div>
+          </div>
+          <div class="err" id="setErr"></div>
+          <button class="btn primary" id="setSave">Save settings</button>
+        </form>
+      </section>
+
+      <!-- Audit -->
+      <section data-panel="audit" class="hidden">
+        <div class="panel">
+          <h2>Audit log</h2>
+          <p class="hint">Every clock-in, clock-out and admin change is recorded here.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Employee</th><th>Details</th></tr></thead>
+              <tbody id="auBody"></tbody>
+            </table>
+          </div>
+          <button class="btn" id="auMore" style="margin-top:12px">Load more</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Punch dialog -->
+  <dialog id="punchDlg">
+    <form method="dialog" id="punchForm">
+      <h3 id="punchDlgTitle">Edit punch</h3>
+      <div class="field"><label>Employee</label><select id="pdEmp"></select></div>
+      <div class="field"><label>Clock in</label><input type="datetime-local" id="pdIn" required></div>
+      <div class="field"><label>Clock out</label><input type="datetime-local" id="pdOut">
+        <div class="hint">Leave blank if the employee is still clocked in.</div>
+      </div>
+      <div class="field"><label>Reason / note</label><input id="pdNote" maxlength="500" placeholder="e.g. Forgot to clock out"></div>
+      <div class="err" id="pdErr"></div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="pdDelete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="pdCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="pdSave">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Employee dialog -->
+  <dialog id="empDlg">
+    <form method="dialog" id="empForm">
+      <h3 id="empDlgTitle">Employee</h3>
+      <div class="field"><label>Name</label><input id="edName" maxlength="80" required></div>
+      <div class="field"><label id="edPinLabel">PIN</label>
+        <input id="edPin" inputmode="numeric" autocomplete="off" pattern="\d*">
+        <div class="hint" id="edPinHint"></div>
+      </div>
+      <div class="field" id="edActiveWrap">
+        <label><input type="checkbox" id="edActive" style="min-height:auto"> Active (can clock in)</label>
+      </div>
+      <div class="err" id="edErr"></div>
+      <div class="actions">
+        <button type="button" class="btn" id="edRandom">Random PIN</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="edCancel">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
