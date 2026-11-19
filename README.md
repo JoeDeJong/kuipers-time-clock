@@ -2,6 +2,10 @@
 
 A simple, PIN-based employee time clock built to run on a wall-mounted or counter tablet.
 
+**[Try the live demo →](https://joedejong.github.io/kuipers-time-clock/)**
+
+The demo runs entirely in your browser with sample employees and hours. Changes you make are saved only in your own browser. Test PINs: **1111** (Maria), **2222** (Dave), **3333** (Sam). Admin PIN: **9999**.
+
 - **Employees** tap in their PIN, see whether they're clocked in or out, and press one big **Clock In** / **Clock Out** button.
 - **Regular and overtime hours** are calculated automatically (weekly overtime after 40 h by default, with optional daily overtime).
 - **Admins** (separate admin PIN) can add, edit and delete punches, clock out someone who forgot, manage employees, run timesheets, export CSV for payroll, and download backups.
@@ -117,8 +121,15 @@ Use **Settings → Download backup** regularly (for example, after each payroll 
 ## Development
 
 ```bash
-npm test     # overtime calculations + API tests
+npm test            # overtime calculations, API and demo tests
+npm run build:demo  # rebuild the live demo (docs/index.html)
 ```
+
+### The live demo
+
+`docs/index.html` is a single-page demo built from the real pages in `public/` plus an in-browser stand-in for the server (`demo/mock.js`). GitHub Pages serves it from the `docs/` folder. After changing anything in `public/` or `server/hours.js`, run `npm run build:demo` and commit the result. A test fails if you forget.
+
+To turn on hosting (one time): on GitHub, open **Settings → Pages**, set **Source** to *Deploy from a branch*, choose the `main` branch and the `/docs` folder, and save. The demo appears at `https://<your-user>.github.io/kuipers-time-clock/` a minute or two later. GitHub Pages on a free account needs a public repository.
 
 Code layout:
 
@@ -127,5 +138,7 @@ server/index.js   HTTP server + API routes
 server/db.js      SQLite storage (employees, punches, audit log, settings)
 server/hours.js   Regular / overtime calculation
 public/           Kiosk page (index.html) and admin page (admin.html)
+demo/             Builds the browser-only demo (mock server, glue, build script)
+docs/             Built demo served by GitHub Pages (generated; don't edit by hand)
 test/             Tests (node --test)
 ```
