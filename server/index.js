@@ -25,9 +25,10 @@ const LOCKOUT_FAILS = 5;
 const LOCKOUT_MS = 60 * 1000;
 
 class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, extra = {}) {
     super(message);
     this.status = status;
+    this.extra = extra; // e.g. { code } so the kiosk can show the message in the employee's language
   }
 }
 
@@ -40,7 +41,7 @@ function createApp(store, { now = () => Date.now() } = {}) {
     const f = failures.get(ip);
     if (f && f.until > now()) {
       const secs = Math.ceil((f.until - now()) / 1000);
-      throw new HttpError(429, `Too many wrong PINs. Try again in ${secs} seconds.`);
+      throw new HttpError(429, `Too many wrong PINs. Try again in ${secs} seconds.`, { code: 'locked', retry_after: secs });
     }
   }
   function recordFail(ip) {
@@ -163,7 +164,7 @@ function createApp(store, { now = () => Date.now() } = {}) {
     const emp = validPin(body.pin) ? store.findEmployeeByPin(body.pin) : null;
     if (!emp || !emp.active) {
       recordFail(ip);
-      throw new HttpError(401, 'PIN not recognized.');
+      throw new HttpError(401, 'PIN not recognized.', { code: 'pin_not_recognized' });
     }
     clearFail(ip);
     const open = store.openPunch(emp.id);
@@ -183,20 +184,20 @@ function createApp(store, { now = () => Date.now() } = {}) {
     const emp = validPin(body.pin) ? store.findEmployeeByPin(body.pin) : null;
     if (!emp || !emp.active) {
       recordFail(ip);
-      throw new HttpError(401, 'PIN not recognized.');
+      throw new HttpError(401, 'PIN not recognized.', { code: 'pin_not_recognized' });
     }
     clearFail(ip);
     const t = now();
     const result = store.tx(() => {
       const open = store.openPunch(emp.id);
       if (body.action === 'in') {
-        if (open) throw new HttpError(409, 'You are already clocked in.');
+        if (open) throw new HttpError(409, 'You are already clocked in.', { code: 'already_in' });
         const id = store.clockIn(emp.id, t);
         store.audit('kiosk', 'clock_in', { employeeId: emp.id, punchId: id, details: fmt(t) });
         return { action: 'in', at: t };
       }
       if (body.action === 'out') {
-        if (!open) throw new HttpError(409, 'You are not clocked in.');
+        if (!open) throw new HttpError(409, 'You are not clocked in.', { code: 'not_in' });
         store.clockOut(open.id, t);
         store.audit('kiosk', 'clock_out', { employeeId: emp.id, punchId: open.id, details: fmt(t) });
         return { action: 'out', at: t, shift_hours: H.msToHours(t - open.clock_in) };
@@ -551,7 +552,7 @@ function createApp(store, { now = () => Date.now() } = {}) {
       send(200, out, headers);
     } catch (e) {
       if (e instanceof HttpError) {
-        send(e.status, { error: e.message });
+        send(e.status, { error: e.message, ...e.extra });
       } else {
         console.error(e);
         send(500, { error: 'Server error.' });

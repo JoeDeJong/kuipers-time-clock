@@ -17,7 +17,13 @@
   <div class="kiosk">
     <header class="kiosk-header">
       <div class="company" id="company">Time Clock</div>
-      <a class="admin-link" href="/admin">Admin</a>
+      <div class="header-actions">
+        <div class="lang-switch" role="group" aria-label="Language / Idioma" id="langSwitch">
+          <button type="button" data-lang="en" lang="en">English</button>
+          <button type="button" data-lang="es" lang="es">Español</button>
+        </div>
+        <a class="admin-link" href="/admin" data-i18n="admin">Admin</a>
+      </div>
     </header>
 
     <main class="kiosk-main">
@@ -27,14 +33,14 @@
       </section>
 
       <section class="pin-panel" id="pinPanel">
-        <div class="pin-label">Enter your PIN</div>
+        <div class="pin-label" data-i18n="enterPin">Enter your PIN</div>
         <div class="pin-dots" id="pinDots"></div>
         <div class="pin-msg" id="pinMsg"></div>
         <div class="keypad" id="keypad">
           <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
           <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
           <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
-          <button data-k="clear" class="fn">Clear</button><button data-k="0">0</button><button data-k="back" class="fn">&#9003;</button>
+          <button data-k="clear" class="fn" data-i18n="clear">Clear</button><button data-k="0">0</button><button data-k="back" class="fn" data-i18n-label="backspace" aria-label="Backspace">&#9003;</button>
         </div>
       </section>
     </main>
@@ -46,11 +52,11 @@
       <h1 id="stName"></h1>
       <div class="status-line" id="stLine"></div>
       <div class="week-stats">
-        <div><b id="stReg">0.00</b><small>Regular hrs this week</small></div>
-        <div><b id="stOt" class="ot">0.00</b><small>Overtime hrs this week</small></div>
+        <div><b id="stReg">0.00</b><small data-i18n="regularWeek">Regular hrs this week</small></div>
+        <div><b id="stOt" class="ot">0.00</b><small data-i18n="overtimeWeek">Overtime hrs this week</small></div>
       </div>
       <button class="big-btn" id="punchBtn"></button>
-      <button class="cancel-btn" id="cancelBtn">Cancel</button>
+      <button class="cancel-btn" id="cancelBtn" data-i18n="cancel">Cancel</button>
       <div class="pin-msg" id="stMsg" style="margin-top:12px"></div>
     </div>
   </div>
@@ -63,10 +69,10 @@
       <div class="confirm-time" id="dnTime"></div>
       <div class="muted" id="dnDetail"></div>
       <div class="week-stats" style="margin-top:20px">
-        <div><b id="dnReg">0.00</b><small>Regular hrs this week</small></div>
-        <div><b id="dnOt" class="ot">0.00</b><small>Overtime hrs this week</small></div>
+        <div><b id="dnReg">0.00</b><small data-i18n="regularWeek">Regular hrs this week</small></div>
+        <div><b id="dnOt" class="ot">0.00</b><small data-i18n="overtimeWeek">Overtime hrs this week</small></div>
       </div>
-      <button class="cancel-btn" id="doneBtn">Done</button>
+      <button class="cancel-btn" id="doneBtn" data-i18n="done">Done</button>
       <div class="countdown" id="dnCount"></div>
     </div>
   </div>

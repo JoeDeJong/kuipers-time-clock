@@ -48,12 +48,15 @@ test('full flow: setup, employees, punches, overtime, edits', async (t) => {
   assert.equal(b.status, 200);
 
   // Kiosk
-  assert.equal((await call('POST', '/api/kiosk/lookup', { pin: '0000' })).status, 401);
+  const bad = await call('POST', '/api/kiosk/lookup', { pin: '0000' });
+  assert.equal(bad.status, 401);
+  assert.equal(bad.data.code, 'pin_not_recognized');
   let r = await call('POST', '/api/kiosk/lookup', { pin: '1234' });
   assert.equal(r.data.name, 'Alice');
   assert.equal(r.data.clocked_in, false);
   r = await call('POST', '/api/kiosk/punch', { pin: '1234', action: 'out' });
   assert.equal(r.status, 409);
+  assert.equal(r.data.code, 'not_in');
   r = await call('POST', '/api/kiosk/punch', { pin: '1234', action: 'in' });
   assert.equal(r.data.action, 'in');
   assert.equal((await call('POST', '/api/kiosk/punch', { pin: '1234', action: 'in' })).status, 409);
@@ -135,7 +138,10 @@ test('wrong PINs trigger a temporary lockout', async (t) => {
   const { server, call } = await setup();
   t.after(() => server.close());
   for (let i = 0; i < 5; i++) await call('POST', '/api/kiosk/lookup', { pin: '0000' });
-  assert.equal((await call('POST', '/api/kiosk/lookup', { pin: '0000' })).status, 429);
+  const locked = await call('POST', '/api/kiosk/lookup', { pin: '0000' });
+  assert.equal(locked.status, 429);
+  assert.equal(locked.data.code, 'locked');
+  assert.ok(locked.data.retry_after > 0);
 });
 
 test('static files and path traversal', async (t) => {
