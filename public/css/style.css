@@ -212,6 +212,12 @@ input, select, textarea { font: inherit; }
 }
 .tabs button.active { background: var(--panel-2); border-color: var(--border); color: var(--text); }
 
+@media (max-width: 720px) {
+  .admin-top h1 { flex: 1; }
+  .tabs { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; }
+  .tabs button { white-space: nowrap; }
+}
+
 .admin-body { padding: 20px; max-width: 1200px; margin: 0 auto; }
 
 .btn {
