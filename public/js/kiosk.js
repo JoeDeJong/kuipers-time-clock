@@ -301,7 +301,9 @@
     const s = t();
     const isIn = data.action === 'in';
     $('dnIcon').className = 'confirm-icon ' + (isIn ? 'in' : 'out');
-    $('dnIcon').textContent = isIn ? '✔' : '⏹';
+    $('dnIcon').innerHTML = isIn
+      ? '<span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>'
+      : '<span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 17l5-5-5-5M21 12H9M12 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/></svg></span>';
     $('dnTitle').textContent = isIn ? s.doneIn(data.name) : s.doneOut(data.name);
     $('dnTime').textContent = timeFmt.format(new Date(data.at));
     $('dnDetail').textContent = isIn ? s.greatShift : s.shiftHours(fmtHours(data.shift_hours));

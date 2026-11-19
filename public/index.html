@@ -11,16 +11,18 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="theme-kiosk">
   <div class="kiosk">
     <header class="kiosk-header">
-      <div class="company" id="company">Time Clock</div>
+      <div class="company"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2257d6"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M16 11v5.5l3.5 2.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="company">Time Clock</span></div>
       <div class="header-actions">
         <div class="lang-switch" role="group" aria-label="Language / Idioma" id="langSwitch">
-          <button type="button" data-lang="en" lang="en">English</button>
-          <button type="button" data-lang="es" lang="es">Español</button>
+          <button type="button" data-lang="en" lang="en" aria-label="English"><span class="full">English</span><span class="short">EN</span></button>
+          <button type="button" data-lang="es" lang="es" aria-label="Español"><span class="full">Español</span><span class="short">ES</span></button>
         </div>
         <a class="admin-link" href="/admin" data-i18n="admin">Admin</a>
       </div>

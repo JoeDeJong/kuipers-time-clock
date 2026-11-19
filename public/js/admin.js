@@ -120,7 +120,7 @@
 
   async function enterAdmin() {
     settings = await api('GET', '/api/admin/settings');
-    $('adminTitle').textContent = `${settings.company_name} Admin`;
+    $('adminTitle').textContent = settings.company_name;
     $('loginView').classList.add('hidden');
     $('adminView').classList.remove('hidden');
     await loadEmployees();
@@ -149,27 +149,68 @@
     if (b) showTab(b.dataset.tab);
   });
 
+  // ---------- shared bits ----------
+  function initials(name) {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+  function person(name, meta) {
+    return el('div', { class: 'person' },
+      el('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(name)),
+      el('div', {}, el('div', { class: 'name' }, name), meta ? el('div', { class: 'meta' }, meta) : ''));
+  }
+  function stat(label, value, opts = {}) {
+    return el('div', { class: 'stat' + (opts.cls ? ` ${opts.cls}` : '') },
+      el('div', { class: 'label' }, label),
+      el('div', { class: 'value' }, value, opts.unit ? el('small', {}, opts.unit) : ''),
+      opts.foot ? el('div', { class: 'foot' }, opts.foot) : '');
+  }
+  function emptyRow(cols, text) {
+    return el('tr', {}, el('td', { colspan: cols, class: 'empty' }, text));
+  }
+  function duration(ms) {
+    const mins = Math.max(0, Math.floor(ms / 60000));
+    const h = Math.floor(mins / 60);
+    return h ? `${h}h ${mins % 60}m` : `${mins}m`;
+  }
+  // Overtime is highlighted only when there is some.
+  const otCell = (v) => el('td', { class: Number(v) > 0 ? 'num ot' : 'num muted' }, h2(v));
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
   // ---------- dashboard ----------
   async function loadDashboard() {
     const d = await api('GET', '/api/admin/dashboard');
-    $('dashWeek').textContent = `— week of ${fmtDay.format(parseDateStr(d.week_from))}`;
+    $('dashWeek').textContent = `Workweek starting ${fmtDayYear.format(parseDateStr(d.week_from))}. Updates every 30 seconds.`;
+    const active = d.employees.filter((e) => e.active);
+    const inNow = d.employees.filter((e) => e.clocked_in_at);
+    const sum = (k) => d.employees.reduce((t, e) => t + e.week[k], 0);
+    const otCount = d.employees.filter((e) => e.week.overtime > 0).length;
+    $('dashStats').replaceChildren(
+      stat('Clocked in now', String(inNow.length), { cls: 'live', unit: `of ${active.length}` }),
+      stat('Regular hours', h2(sum('regular')), { foot: 'This week, everyone' }),
+      stat('Overtime hours', h2(sum('overtime')), { cls: sum('overtime') > 0 ? 'ot' : '', foot: otCount ? `${plural(otCount, 'person', 'people')} in overtime` : 'No overtime this week' }),
+      stat('Total hours', h2(sum('total')), { foot: 'This week so far' }),
+    );
     const body = $('dashBody');
     body.innerHTML = '';
     if (!d.employees.length) {
-      body.appendChild(el('tr', {}, el('td', { colspan: 5, class: 'muted' }, 'No employees yet. Add some on the Employees tab.')));
+      body.appendChild(emptyRow(6, 'No employees yet. Add your team on the Employees page.'));
       return;
     }
     const sorted = [...d.employees].sort((a, b) => (!!b.clocked_in_at - !!a.clocked_in_at) || a.name.localeCompare(b.name));
+    const now = Date.now();
     for (const e of sorted) {
       body.appendChild(el('tr', {},
-        el('td', {}, e.name),
+        el('td', {}, person(e.name, e.clocked_in_at ? `On the clock for ${duration(now - e.clocked_in_at)}` : null)),
         el('td', {}, e.clocked_in_at
-          ? el('span', { class: 'tag in' }, `In since ${fmtFull.format(new Date(e.clocked_in_at))}`)
-          : el('span', { class: 'tag' }, 'Out')),
+          ? el('span', { class: 'tag in dot' }, `In since ${fmtTime.format(new Date(e.clocked_in_at))}`)
+          : el('span', { class: 'tag dot' }, 'Out')),
         el('td', { class: 'num' }, h2(e.week.regular)),
-        el('td', { class: 'num ot' }, h2(e.week.overtime)),
-        el('td', { class: 'num' }, e.clocked_in_at
-          ? el('button', { class: 'btn small', onclick: () => adminClockOut(e) }, 'Clock out now')
+        otCell(e.week.overtime),
+        el('td', { class: 'num' }, el('b', {}, h2(e.week.total))),
+        el('td', { class: 'actions' }, e.clocked_in_at
+          ? el('button', { class: 'btn small', onclick: () => adminClockOut(e) }, 'Clock out')
           : ''),
       ));
     }
@@ -218,35 +259,50 @@
     const from = $('tsFrom').value;
     const to = $('tsTo').value;
     const q = `from=${from}&to=${to}`;
-    $('tsCsv').href = `/api/admin/report.csv?${q}`;
-    $('tsCsvDaily').href = `/api/admin/report.csv?${q}&detail=1`;
+    $('tsCsv').dataset.href = `/api/admin/report.csv?${q}`;
+    $('tsCsvDaily').dataset.href = `/api/admin/report.csv?${q}&detail=1`;
     const r = await api('GET', `/api/admin/report?${q}`);
-    $('tsTitle').textContent = `Timesheet: ${fmtDayYear.format(parseDateStr(r.from))} – ${fmtDayYear.format(parseDateStr(r.to))}`;
+    $('tsTitle').textContent = `${fmtDayYear.format(parseDateStr(r.from))} to ${fmtDayYear.format(parseDateStr(r.to))}`;
     const rules = [];
-    rules.push(r.rules.weeklyOtHours > 0 ? `overtime after ${r.rules.weeklyOtHours} h/week` : 'no weekly overtime');
-    if (r.rules.dailyOtHours > 0) rules.push(`after ${r.rules.dailyOtHours} h/day`);
-    rules.push(`workweek starts ${DAYS[r.rules.weekStartDay]}`);
-    $('tsRules').textContent = `Rules: ${rules.join(', ')}.`;
+    rules.push(r.rules.weeklyOtHours > 0 ? `Overtime after ${r.rules.weeklyOtHours} hours per week` : 'No weekly overtime');
+    if (r.rules.dailyOtHours > 0) rules.push(`or ${r.rules.dailyOtHours} hours per day`);
+    $('tsRules').textContent = `${rules.join(' ')}. Workweek starts ${DAYS[r.rules.weekStartDay]}. Hours are decimal (7.50 = 7 h 30 m). Click an employee for a daily breakdown.`;
+
+    const worked = r.rows.filter((x) => x.total > 0).length;
+    const otCount = r.rows.filter((x) => x.overtime > 0).length;
+    $('tsStats').replaceChildren(
+      stat('Regular hours', h2(r.totals.regular)),
+      stat('Overtime hours', h2(r.totals.overtime), { cls: r.totals.overtime > 0 ? 'ot' : '', foot: otCount ? `${plural(otCount, 'person', 'people')} with overtime` : 'No overtime' }),
+      stat('Total hours', h2(r.totals.total)),
+      stat('Employees', String(worked), { foot: 'With hours in this period' }),
+    );
 
     const body = $('tsBody');
     body.innerHTML = '';
     if (!r.rows.length) {
-      body.appendChild(el('tr', {}, el('td', { colspan: 5, class: 'muted' }, 'No employees.')));
+      body.appendChild(emptyRow(5, 'No employees yet.'));
       return;
     }
     for (const row of r.rows) {
-      const detail = el('tr', { class: 'hidden' }, el('td', { colspan: 5 }, dayTable(row)));
-      const main = el('tr', { class: 'clickable', onclick: () => detail.classList.toggle('hidden') },
-        el('td', {}, row.name, ' ',
-          row.open ? el('span', { class: 'tag in' }, 'clocked in') : '',
-          !row.active ? el('span', { class: 'tag inactive' }, 'inactive') : ''),
+      const detail = el('tr', { class: 'detail hidden' }, el('td', { colspan: 5 }, dayTable(row)));
+      const main = el('tr', {
+        class: 'clickable',
+        onclick: () => { detail.classList.toggle('hidden'); main.classList.toggle('open'); },
+      },
+        el('td', {}, el('div', { class: 'person' },
+          el('span', { class: 'chev', 'aria-hidden': 'true' }, '›'),
+          el('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(row.name)),
+          el('div', {}, el('div', { class: 'name' }, row.name),
+            (row.open || !row.active) ? el('div', { class: 'meta' },
+              row.open ? el('span', { class: 'tag in dot' }, 'Clocked in') : '',
+              !row.active ? el('span', { class: 'tag inactive' }, 'Inactive') : '') : ''))),
         el('td', { class: 'num' }, h2(row.regular)),
-        el('td', { class: 'num ot' }, h2(row.overtime)),
-        el('td', { class: 'num' }, h2(row.total)),
-        el('td', { class: 'num' }, el('button', {
+        otCell(row.overtime),
+        el('td', { class: 'num' }, el('b', {}, h2(row.total))),
+        el('td', { class: 'actions' }, el('button', {
           class: 'btn small',
           onclick: (ev) => { ev.stopPropagation(); openPunchesFor(row.employee_id, from, to); },
-        }, 'Punches')),
+        }, 'View punches')),
       );
       body.appendChild(main);
       body.appendChild(detail);
@@ -254,7 +310,7 @@
     body.appendChild(el('tr', { class: 'total' },
       el('td', {}, 'Total'),
       el('td', { class: 'num' }, h2(r.totals.regular)),
-      el('td', { class: 'num ot' }, h2(r.totals.overtime)),
+      otCell(r.totals.overtime),
       el('td', { class: 'num' }, h2(r.totals.total)),
       el('td', {}),
     ));
@@ -267,13 +323,20 @@
       el('tbody', {}, row.days.map((d) => el('tr', {},
         el('td', {}, fmtDay.format(parseDateStr(d.date))),
         el('td', { class: 'num' }, h2(d.regular)),
-        el('td', { class: 'num ot' }, h2(d.overtime)),
+        otCell(d.overtime),
         el('td', { class: 'num' }, h2(d.regular + d.overtime)),
       ))),
     );
   }
 
   $('tsRun').addEventListener('click', () => loadTimesheet().catch((e) => toast(e.message)));
+  for (const id of ['tsCsv', 'tsCsvDaily']) {
+    $(id).addEventListener('click', () => { if ($(id).dataset.href) window.location.href = $(id).dataset.href; });
+  }
+  $('tsPrint').addEventListener('click', () => {
+    for (const r of document.querySelectorAll('#tsBody tr.detail')) r.classList.remove('hidden');
+    window.print();
+  });
 
   function openPunchesFor(empId, from, to) {
     $('puEmp').value = String(empId);
@@ -301,7 +364,7 @@
     const body = $('puBody');
     body.innerHTML = '';
     if (!list.length) {
-      body.appendChild(el('tr', {}, el('td', { colspan: 6, class: 'muted' }, 'No punches in this period.')));
+      body.appendChild(emptyRow(6, 'No punches in this period.'));
       return;
     }
     let lastDay = null;
@@ -314,14 +377,14 @@
       const end = p.clock_out || Date.now();
       const sameDay = p.clock_out && dateStr(new Date(p.clock_out)) === day;
       body.appendChild(el('tr', {},
-        el('td', {}, p.employee_name),
-        el('td', {}, fmtTime.format(new Date(p.clock_in))),
-        el('td', {}, p.clock_out
+        el('td', {}, person(p.employee_name)),
+        el('td', { class: 'tabular' }, fmtTime.format(new Date(p.clock_in))),
+        el('td', { class: 'tabular' }, p.clock_out
           ? (sameDay ? fmtTime.format(new Date(p.clock_out)) : fmtFull.format(new Date(p.clock_out)))
-          : el('span', { class: 'tag in' }, 'still in')),
+          : el('span', { class: 'tag in dot' }, 'Still clocked in')),
         el('td', { class: 'num' }, h2((end - p.clock_in) / 3600000)),
-        el('td', {}, p.note || '', p.edited ? [' ', el('span', { class: 'tag edited' }, 'edited')] : ''),
-        el('td', { class: 'num' }, el('button', { class: 'btn small', onclick: () => openPunchDlg(p) }, 'Edit')),
+        el('td', {}, p.edited ? el('span', { class: 'tag edited' }, 'Edited') : '', p.note ? ` ${p.note}` : ''),
+        el('td', { class: 'actions' }, el('button', { class: 'btn small', onclick: () => openPunchDlg(p) }, 'Edit')),
       ));
     }
   }
@@ -398,17 +461,17 @@
     const body = $('empBody');
     body.innerHTML = '';
     if (!employees.length) {
-      body.appendChild(el('tr', {}, el('td', { colspan: 4, class: 'muted' }, 'No employees yet. Tap "+ Add employee" to get started.')));
+      body.appendChild(emptyRow(4, 'No employees yet. Click "Add employee" to get started.'));
       return;
     }
     for (const e of employees) {
       body.appendChild(el('tr', {},
-        el('td', {}, e.name),
+        el('td', {}, person(e.name)),
         el('td', {},
-          e.active ? el('span', { class: 'tag' }, 'Active') : el('span', { class: 'tag inactive' }, 'Inactive'),
-          e.clocked_in_at ? [' ', el('span', { class: 'tag in' }, 'clocked in')] : ''),
-        el('td', {}, fmtDayYear.format(new Date(e.created_at))),
-        el('td', { class: 'num' }, el('button', { class: 'btn small', onclick: () => openEmpDlg(e) }, 'Edit')),
+          e.active ? el('span', { class: 'tag dot accent' }, 'Active') : el('span', { class: 'tag inactive' }, 'Inactive'),
+          e.clocked_in_at ? [' ', el('span', { class: 'tag in dot' }, 'Clocked in')] : ''),
+        el('td', { class: 'muted' }, fmtDayYear.format(new Date(e.created_at))),
+        el('td', { class: 'actions' }, el('button', { class: 'btn small', onclick: () => openEmpDlg(e) }, 'Edit')),
       ));
     }
   }
@@ -490,7 +553,7 @@
     }
     try {
       settings = await api('PUT', '/api/admin/settings', body);
-      $('adminTitle').textContent = `${settings.company_name} Admin`;
+      $('adminTitle').textContent = settings.company_name;
       toast('Settings saved.');
       renderSettings();
     } catch (err) {
@@ -512,6 +575,12 @@
     admin_pin_set: 'Admin PIN set',
   };
 
+  const ACTION_STYLE = {
+    clock_in: 'in', clock_out: '', admin_clock_out: 'edited', punch_added: 'edited',
+    punch_edited: 'edited', punch_deleted: 'inactive', employee_created: 'accent',
+    employee_updated: 'accent', settings_changed: 'accent', admin_pin_set: 'accent',
+  };
+
   async function loadAudit() {
     const rows = await api('GET', `/api/admin/audit?limit=100&offset=${auditOffset}`);
     auditOffset += rows.length;
@@ -519,14 +588,14 @@
     const body = $('auBody');
     for (const a of rows) {
       body.appendChild(el('tr', {},
-        el('td', {}, fmtFull.format(new Date(a.at))),
-        el('td', {}, a.actor),
-        el('td', {}, ACTIONS[a.action] || a.action),
+        el('td', { class: 'tabular', style: 'white-space:nowrap' }, fmtFull.format(new Date(a.at))),
+        el('td', {}, el('span', { class: `tag ${ACTION_STYLE[a.action] || ''}` }, ACTIONS[a.action] || a.action)),
         el('td', {}, a.employee_name || ''),
-        el('td', {}, a.details),
+        el('td', { class: 'muted' }, a.details),
+        el('td', { class: 'muted' }, a.actor === 'kiosk' ? 'Time clock' : 'Admin'),
       ));
     }
-    if (!body.children.length) body.appendChild(el('tr', {}, el('td', { colspan: 5, class: 'muted' }, 'Nothing yet.')));
+    if (!body.children.length) body.appendChild(emptyRow(5, 'Nothing recorded yet.'));
   }
   $('auMore').addEventListener('click', () => loadAudit().catch((e) => toast(e.message)));
 
