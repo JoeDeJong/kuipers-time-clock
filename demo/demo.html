@@ -1,0 +1,30 @@
+<!-- Demo-only markup: info card, confirmation dialog, CSV viewer -->
+<div class="demo-card" id="demoCard" role="dialog" aria-label="Demo information" hidden>
+  <h2>Test drive</h2>
+  <p>This is a working demo of the time clock. Changes are saved in this browser only. Try a PIN below, then open Admin to see and fix the hours.</p>
+  <table><tbody id="demoPins"></tbody>
+    <tbody><tr><td class="muted">Admin PIN</td><td class="num"><b id="demoAdminPin"></b></td></tr></tbody></table>
+  <div class="row">
+    <button type="button" class="btn" id="demoReset">Reset data</button>
+    <button type="button" class="btn primary" id="demoClose">Got it</button>
+  </div>
+</div>
+<dialog id="askDlg">
+  <form method="dialog" onsubmit="event.preventDefault(); document.getElementById('askOk').click();">
+    <h3 id="askMsg"></h3>
+    <div class="field" id="askInputWrap" hidden><input id="askInput" maxlength="500"></div>
+    <div class="actions">
+      <button type="button" class="btn" id="askCancel">Cancel</button>
+      <button type="submit" class="btn primary" id="askOk">OK</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="csvDlg"><div class="dlg">
+  <h3 id="csvTitle">CSV export</h3>
+  <p class="hint">Paste this into Excel or your payroll system. In the real app this downloads as a .csv file.</p>
+  <textarea id="csvText" readonly></textarea>
+  <div class="actions">
+    <button type="button" class="btn" id="csvClose">Close</button>
+    <button type="button" class="btn primary" id="csvCopy">Copy</button>
+  </div>
+</div></dialog>
